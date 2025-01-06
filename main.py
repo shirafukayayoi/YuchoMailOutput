@@ -6,17 +6,23 @@ import re
 import gspread
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+# Gmail APIとGoogleスプレッドシートAPIのスコープ
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/spreadsheets",
+]
 
+
+# Gmail APIにログイン
 def gmail_login():
     credentials_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "credentials.json"
     )
     token_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token.json")
-    SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+
     creds = None
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
@@ -28,10 +34,12 @@ def gmail_login():
             creds = flow.run_local_server(port=0)
         with open(token_path, "w") as token:
             token.write(creds.to_json())
+
     service = build("gmail", "v1", credentials=creds)
-    return service
+    return service, creds
 
 
+# Gmailから「ゆうちょデビット」メールを取得
 def get_yucho_message(service):
     results = (
         service.users()
@@ -44,7 +52,6 @@ def get_yucho_message(service):
         .execute()
     )
     messages = results.get("messages", [])
-
     while "nextPageToken" in results:
         page_token = results["nextPageToken"]
         results = (
@@ -99,23 +106,15 @@ def get_yucho_message(service):
     return dates, amounts, stores
 
 
-def spreadsheet_login(spreadsheet_id):
-    service_token_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "..", "service_token.json"
-    )
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    creds = ServiceAccountCredentials.from_service_account_file(
-        service_token_path, scopes=scope
-    )
+# Googleスプレッドシートにログイン
+def spreadsheet_login(creds, spreadsheet_id):
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key(spreadsheet_id)
     sheet = spreadsheet.sheet1
-    return sheet, spreadsheet, sheet
+    return sheet
 
 
+# CSVファイルに書き込み
 def write_to_csv(dates, amounts, stores):
     filename = "yucho_usage.csv"
     with open(filename, "w", newline="", encoding="utf-8") as csvfile:
@@ -126,6 +125,7 @@ def write_to_csv(dates, amounts, stores):
     print(f"データを {filename} に出力しました。")
 
 
+# スプレッドシートにデータを書き込み
 def while_yuchomail_output(dates, amounts, stores, sheet):
     if len(dates) != len(amounts) or len(dates) != len(stores):
         print("Error: The lengths of dates, amounts, and stores lists do not match.")
@@ -140,9 +140,10 @@ def while_yuchomail_output(dates, amounts, stores, sheet):
     sheet.update("E2", [["=SUM(B2:B)"]], value_input_option="USER_ENTERED")
 
 
+# メイン処理
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    service = gmail_login()
+    service, creds = gmail_login()
     dates, amounts, stores = get_yucho_message(service)
 
     output_type = input("CSVとして出力しますか？（y/n）: ")
@@ -151,5 +152,5 @@ if __name__ == "__main__":
         write_to_csv(dates, amounts, stores)
     else:
         spreadsheet_id = input("スプレッドシートのIDを入力してください: ")
-        sheet, spreadsheet, sheet = spreadsheet_login(spreadsheet_id)
+        sheet = spreadsheet_login(creds, spreadsheet_id)
         while_yuchomail_output(dates, amounts, stores, sheet)

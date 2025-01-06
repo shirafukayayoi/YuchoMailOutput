@@ -36,9 +36,12 @@ python main.py
 自分の好みを方を選んでください。
 
 もし、スプレッドシートで出力の場合、`spreadsheet_id`が必要になります。  
-サービスアカウントも必要になると思います。  
+~~サービスアカウントも必要になると思います。  
 サービスアカウントについては[サービスアカウントを利用したGoogleスプレッドシートの連携設定](https://docs.biztex.co.jp/cobit-docs/google_spreadsheet_settings/for_serviceaccount.html)こちらが参考になると思います。  
-`spreadsheet_id`についてはサービスアカウントを追加したスプレッドシートのURL、`https://docs.google.com/spreadsheets/d/{12ysa4UFkPYQfDhKUhZ4Y489AdoLK_IrPQAv9rHVqawo}/edit?gid=0#gid=0`の{}の部分を入れてください。
+`spreadsheet_id`についてはサービスアカウントを追加したスプレッドシートのURL、`https://docs.google.com/spreadsheets/d/{12ysa4UFkPYQfDhKUhZ4Y489AdoLK_IrPQAv9rHVqawo}/edit?gid=0#gid=0`の{}の部分を入れてください。~~
+
+サービスアカウントなしで実行できるようにしました。  
+`spreadsheet_id`だけ取得するようにしてください。
 
 ### Let'GO!!!!!!!!!!
 
